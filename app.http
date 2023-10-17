@@ -1,0 +1,23 @@
+POST http://localhost:3001/register/ 
+Content-Type: application/json 
+
+{
+   "username": "adam_richard",
+  "password": "richard_567",
+  "name": "Adam Richard",
+  "gender": "male"
+}
+
+
+###
+
+POST http://localhost:3001/login/ 
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.Sm9lQmlkZW4.euehz5FJ-vL0bfRp0vtsJRQ2GWuBTusnBFlBhU5coc4
+Content-Type: application/json
+
+{
+  "username":"JoeBiden",
+  "password":"biden@123"
+}
+
+###
