@@ -33,9 +33,41 @@ initializeDatabaseAndServer();
 
 const convertDataBaseObject = (dbObject) => {
   return {
+    userId: dbObject.user_id,
+    name: dbObject.name,
     username: dbObject.username,
     password: dbObject.password,
   };
+};
+
+//Authentication
+
+const Authentication = (request, response, next) => {
+  const { tweetId } = request.params;
+  const { tweet } = request.body;
+
+  let JWTToken = "";
+
+  const authHeader = request.headers["authorization"];
+  if (authHeader !== undefined) {
+    JWTToken = authHeader.split(" ")[1];
+  }
+  if (JWTToken === undefined) {
+    response.status(401);
+    response.send("Invalid JWT Token");
+  } else {
+    jsonwebtoken.verify(JWTToken, "MY_SECRET_KEY", async (error, payload) => {
+      if (error) {
+        response.status(401);
+        response.send("Invalid JWT Token");
+      } else {
+        request.tweetId = tweetId;
+        request.tweet = tweet;
+
+        next();
+      }
+    });
+  }
 };
 
 //API 1 register
@@ -77,20 +109,43 @@ app.post("/login/", async (request, response) => {
     response.send("Invalid user");
   } else {
     const LoginUserDetails = convertDataBaseObject(responseUserDetails);
-    console.log(LoginUserDetails);
+    const payload = LoginUserDetails;
+
     const isPasswordMatched = await bcrypt.compare(
       password,
       LoginUserDetails.password
     );
     if (isPasswordMatched === true) {
-      const payload = LoginUserDetails.username;
-      const jwtToken = jsonwebtoken.sign(payload, "MY_SECRET_KEY");
+      const dbUser = LoginUserDetails.username;
+      const jwtToken = jsonwebtoken.sign(dbUser, "MY_SECRET_KEY");
       response.send({ jwtToken });
     } else {
       response.status(400);
       response.send("Invalid password");
     }
   }
+});
+
+//API 3
+
+app.get("/user/tweets/feed/", Authentication, async (request, response) => {
+  const tweetsQuery = `
+SELECT
+ username, tweet , tweet.date_time AS dateTime
+FROM
+follower
+INNER JOIN tweet
+ON follower.following_user_id = tweet.user_id
+INNER JOIN user
+ON tweet.user_id = user.user_id
+WHERE
+follower.follower_user_id = ${user_id}
+ORDER BY
+tweet.date_time DESC
+LIMIT 4;`;
+
+  const tweetFeedArray = await db.all(tweetsQuery);
+  response.send(tweetFeedArray);
 });
 
 module.exports = app;
